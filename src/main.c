@@ -27,8 +27,17 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <string.h>
+#ifdef __APPLE__
+#include <libusb.h>
+#else
 #include <libusb-1.0/libusb.h>
+#endif
+
+#ifdef __linux__
 #include <linux/hid.h>
+#else
+#include "hid_compat.h"
+#endif
 
 #include "app.h"
 #include "lang.h"

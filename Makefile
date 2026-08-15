@@ -38,6 +38,13 @@ MARKDOWN_GEN   = $(shell which markdown_py)
 ARCHIVER       = tar -zcvf
 ARCHIVE_EXT    = tar.gz
 
+# Portable sed in-place edit: GNU sed uses -i '', BSD/macOS sed uses -i ''
+ifeq ($(shell sed --version 2>/dev/null | head -1 | grep GNU), GNU)
+SED_INPLACE   = sed -i
+else
+SED_INPLACE   = sed -i ''
+endif
+
 # Tune for current CPU (march implies mtune)
 CARCH_FLAG     = -march=native
 
@@ -242,26 +249,26 @@ git.h: gitup templates/git.h.TEMPLATE
 	@# Generating GIT header
 	@echo "Generating git header file..."
 	@cat templates/git.h.TEMPLATE >src/git.h
-	@sed -i 's#//SOURCE//#// WARNING // Auto-generated file, DO NOT MODIFY //#' src/git.h
-	@sed -i 's#\%\%APP_VERSION\%\%#$(APPVER)#'                                  src/git.h
-	@sed -i 's#\%\%BUILD_DATE\%\%#$(BUILD_DATE)#'                               src/git.h
-	@sed -i 's#\%\%BUILD_COMMIT\%\%#$(BUILD_COMMIT)#'                           src/git.h
+	@$(SED_INPLACE) 's#//SOURCE//#// WARNING // Auto-generated file, DO NOT MODIFY //#' src/git.h
+	@$(SED_INPLACE) 's#\%\%APP_VERSION\%\%#$(APPVER)#'                                  src/git.h
+	@$(SED_INPLACE) 's#\%\%BUILD_DATE\%\%#$(BUILD_DATE)#'                               src/git.h
+	@$(SED_INPLACE) 's#\%\%BUILD_COMMIT\%\%#$(BUILD_COMMIT)#'                           src/git.h
 
 log.h: templates/log.h.TEMPLATE
 	@# Generating log header
 	@echo "Generating log header file..."
 	@cat templates/log.h.TEMPLATE >src/log.h
 	@for o in $(OPTIONS:DEBUG%=LOG%); do \
-	    sed -i 's/\(#define '$${o}' *\)NULL.*$$/\1_logfile/' src/log.h; \
+	    $(SED_INPLACE) 's/\(#define '$${o}' *\)NULL.*$$/\1_logfile/' src/log.h; \
 	done
 
 manpage.1: templates/manpage.1.TEMPLATE
 	@# Generating manpage
 	@echo "Generating man page file..."
 	@cat templates/manpage.1.TEMPLATE >manpage.1
-	@sed -i 's#\%\%APP_VERSION\%\%#$(APPVER)#'                                  manpage.1
-	@sed -i 's#\%\%BUILD_MONTH\%\%#$(BUILD_MONTH)#'                             manpage.1
-	@sed -i 's#\%\%BUILD_YEAR\%\%#$(BUILD_YEAR)#'                               manpage.1
+	@$(SED_INPLACE) 's#\%\%APP_VERSION\%\%#$(APPVER)#'                                  manpage.1
+	@$(SED_INPLACE) 's#\%\%BUILD_MONTH\%\%#$(BUILD_MONTH)#'                             manpage.1
+	@$(SED_INPLACE) 's#\%\%BUILD_YEAR\%\%#$(BUILD_YEAR)#'                               manpage.1
 
 $(OPTIONS_FILE): templates/$(OPTIONS_FILE).DEFAULT
 	@cp templates/$(OPTIONS_FILE).DEFAULT $(OPTIONS_FILE)
@@ -274,7 +281,7 @@ $(OPTIONS_FILE): templates/$(OPTIONS_FILE).DEFAULT
 	@sed '/^/,/^%%%%%BODY%%%%%/{/^%%%%%BODY%%%%%/,$$d}' <templates/markdown.TEMPLATE.html  >"$@"
 	@TITLE="$(shell sed -n 's/^# \([^#]*\) #$$/\1/p;q' <"$<")"; \
 		echo "Generating $$TITLE ($<)"; \
-		sed -i 's/%%%%%TITLE%%%%%/'"$$TITLE"'/'             "$@"
+		$(SED_INPLACE) 's/%%%%%TITLE%%%%%/'"$$TITLE"'/'             "$@"
 	$(MARKDOWN_GEN) $(MD_FLAGS) "$<"                                            >>"$@"
 	@echo                                                                       >>"$@"
 	@sed '1,/^%%%%%BODY%%%%%/d'                         <templates/markdown.TEMPLATE.html >>"$@"

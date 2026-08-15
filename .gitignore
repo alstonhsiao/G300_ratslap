@@ -1,0 +1,12 @@
+# Build artefacts
+ratslap
+*.o
+src/git.h
+src/log.h
+make.options.conf
+manpage.1
+Changelog
+tags
+*.html
+*.asc
+*.tar.gz
