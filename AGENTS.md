@@ -89,6 +89,61 @@ Sync with upstream via `git fetch upstream` and merge/rebase onto `main`.
 
 ---
 
+## 跨平台按鍵映射指南
+
+G300s 的按鈕設定寫入滑鼠內建記憶體（onboard memory），設定跟著滑鼠走。
+換到另一台 Mac 或 Windows 電腦，按鈕設定都會保留，不需要重新設定。
+
+### 修飾鍵的跨平台差異
+
+同一個 USB HID 修飾鍵碼在不同作業系統對應不同功能。設定按鈕時必須考慮
+目標平台，否則跨平台行為不一致。
+
+| HID 修飾鍵 | macOS 上的效果 | Windows 上的效果 | 跨平台一致？ |
+|------------|---------------|------------------|-------------|
+| `LeftCtrl` | ⌃ Ctrl | Ctrl | ✅ 是 |
+| `LeftShift` | ⇧ Shift | Shift | ✅ 是 |
+| `LeftAlt` | ⌥ Option | Alt | ✅ 是（但 Alt 快捷鍵意義可能不同） |
+| `Super_L` | ⌘ Command | Win 鍵 | ❌ 否 — Mac 是 Cmd，Windows 是 Win |
+
+### 跨平台設定原則
+
+1. **用 `LeftCtrl` 而非 `Super_L` 做修飾鍵組合。**
+   `LeftCtrl+C/V/X` 在 Mac 和 Windows 上都是複製/貼上/剪下。
+   `Super_L+C/V/X` 在 Mac 上是 Cmd+C/V/X（複製/貼上/剪下），
+   但在 Windows 上是 Win+C/V/X（搜尋/剪貼簿歷史/無），功能完全不同。
+
+2. **純滑鼠按鍵（Button1–11）跨平台無差異。**
+   Button6/Button7 等 extra mouse buttons 在所有平台都是標準滑鼠事件。
+
+3. **避免使用 `Super_L` 做跨平台快捷鍵。**
+   若只針對 Mac 使用，`Super_L` 可以模擬 Cmd 組合；
+   若需跨平台，改用 `LeftCtrl`。
+
+### 推薦的跨平台按鍵組合
+
+| 功能 | 推薦設定 | Mac 效果 | Windows 效果 |
+|------|---------|---------|-------------|
+| 複製 | `LeftCtrl+C` | ⌃C | Ctrl+C ✅ |
+| 貼上 | `LeftCtrl+V` | ⌃V | Ctrl+V ✅ |
+| 剪下 | `LeftCtrl+X` | ⌃X | Ctrl+X ✅ |
+| 復原 | `LeftCtrl+Z` | ⌃Z | Ctrl+Z ✅ |
+| 全選 | `LeftCtrl+A` | ⌃A | Ctrl+A ✅ |
+| 尋找 | `LeftCtrl+F` | ⌃F | Ctrl+F ✅ |
+| 分頁切換（下一個） | `LeftCtrl+Tab` | ⌃Tab | Ctrl+Tab ✅ |
+| 分頁切換（上一個） | `LeftCtrl+LeftShift+Tab` | ⌃⇧Tab | Ctrl+Shift+Tab ✅ |
+| Escape | `Escape` | Esc | Esc ✅ |
+| Enter | `Enter` | Return | Enter ✅ |
+| 滑鼠按鍵 | `Button1`–`Button11` | 對應滑鼠按鍵 | 對應滑鼠按鍵 ✅ |
+
+### Logitech 軟體覆寫風險
+
+若 Windows 電腦安裝了 Logitech Gaming Software 或 G HUB，它偵測到滑鼠時
+可能用自己的設定覆寫 onboard memory。若該電腦未安裝這些軟體，滑鼠會
+維持 RatSlap 寫入的設定。
+
+---
+
 ## 文件維護規則
 
 ### 文件修改權限
