@@ -43,6 +43,27 @@
 #define libusb_strerror libusb_error_name
 #endif
 
+// USB delay tunables (microseconds). Override via -D in make.options.conf.
+#ifndef USB_DELAY_MODE_SAVE
+#define USB_DELAY_MODE_SAVE     500000  /* mode_save write settle (OPT-001) */
+#endif
+#ifndef USB_DELAY_MODE_LOAD
+#define USB_DELAY_MODE_LOAD      10000  /* mode_load read settle */
+#endif
+#ifndef USB_DELAY_EDITMODE_STEP
+#define USB_DELAY_EDITMODE_STEP  50000  /* mouse_editmode per-step (OPT-003) */
+#endif
+#ifndef USB_DELAY_EDITMODE_LONG
+#define USB_DELAY_EDITMODE_LONG 500000  /* mouse_editmode long settle (OPT-003) */
+#endif
+
+// Read-back verification after mode_save (OPT-002).
+// Default: enabled. Disable via -DNO_VERIFY_SAVE in make.options.conf,
+// or toggle at runtime with --verify / --no-verify.
+#ifndef VERIFY_SAVE_DEFAULT
+#define VERIFY_SAVE_DEFAULT 1
+#endif
+
 // http://www.tldp.org/LDP/abs/html/exitcodes.html
 typedef enum e_exit {
      exit_none    = 0
@@ -402,6 +423,9 @@ libusb_device                      *_usb_device     = NULL;
 struct libusb_device_descriptor    _usb_desc;
 int _usb_interface_index = -1;
 int _mouse_primed = 0;
+
+/* OPT-002: read-back verification toggle (runtime override of VERIFY_SAVE_DEFAULT) */
+int _verify_save = VERIFY_SAVE_DEFAULT;
 
 
 
@@ -864,7 +888,7 @@ static int mode_load(unsigned char *mode_data, libusb_device_handle *usb_dev_han
         ,exp_len
         ,1000
     );
-    usleep(10000);
+    usleep(USB_DELAY_MODE_LOAD);
 
     if (ret != exp_len) {
         elog("ERROR: Failed to retrieve current mapping for mode 0x%.2x\n", mi);
@@ -874,13 +898,15 @@ static int mode_load(unsigned char *mode_data, libusb_device_handle *usb_dev_han
     int bit;
     char bitout[255]
          ,*po = &bitout[0];
-    for (bit = 0; bit < exp_len; ++bit) {
-        sprintf(po, "%.2x", (mode_data)[bit]);
-        po += strlen(po);
-        if ((bit+1) % 4 == 0) sprintf(po, " ");
-        po += strlen(po);
+    if (LOG_PARSE) { /* OPT-004: skip formatting when debug disabled */
+        for (bit = 0; bit < exp_len; ++bit) {
+            sprintf(po, "%.2x", (mode_data)[bit]);
+            po += strlen(po);
+            if ((bit+1) % 4 == 0) sprintf(po, " ");
+            po += strlen(po);
+        }
+        dlog(LOG_PARSE, "Mode 0x%.2x: %s\n", mi, bitout);
     }
-    dlog(LOG_PARSE, "Mode 0x%.2x: %s\n", mi, bitout);
 
     return exp_len;
 }
@@ -912,21 +938,25 @@ static int mode_save(unsigned char *mode_data, libusb_device_handle *usb_dev_han
         ,exp_len
         ,1000
     );
-    usleep(500000); // Writes are SLOW
+    usleep(USB_DELAY_MODE_SAVE); /* OPT-001: configurable write settle */
 
     if (ret != exp_len) {
         elog("ERROR: Failed to set current mapping for mode 0x%.2x\n", mi);
         return 0;
     }
 
-    po = &bitout[0];
-    for (bit = 0; bit < exp_len; ++bit) {
-        sprintf(po, "%.2x", (mode_data)[bit]);
-        po += strlen(po);
-        if ((bit+1) % 4 == 0) sprintf(po, " ");
-        po += strlen(po);
+    if (LOG_PARSE) { /* OPT-004: skip formatting when debug disabled */
+        po = &bitout[0];
+        for (bit = 0; bit < exp_len; ++bit) {
+            sprintf(po, "%.2x", (mode_data)[bit]);
+            po += strlen(po);
+            if ((bit+1) % 4 == 0) sprintf(po, " ");
+            po += strlen(po);
+        }
+        dlog(LOG_PARSE, "Mode 0x%.2x: %s\n", mi, bitout);
     }
-    dlog(LOG_PARSE, "Mode 0x%.2x: %s\n", mi, bitout);
+
+    if (!_verify_save) return exp_len; /* OPT-002: skip read-back */
 
     dlog(LOG_PARSE, "Comparing to stored:\n");
 
@@ -936,14 +966,16 @@ static int mode_save(unsigned char *mode_data, libusb_device_handle *usb_dev_han
         return 0;
     }
 
-    po = &bitout[0];
-    for (bit = 0; bit < exp_len; ++bit) {
-        sprintf(po, "%.2x", (cmp)[bit]);
-        po += strlen(po);
-        if ((bit+1) % 4 == 0) sprintf(po, " ");
-        po += strlen(po);
+    if (LOG_PARSE) { /* OPT-004 */
+        po = &bitout[0];
+        for (bit = 0; bit < exp_len; ++bit) {
+            sprintf(po, "%.2x", (cmp)[bit]);
+            po += strlen(po);
+            if ((bit+1) % 4 == 0) sprintf(po, " ");
+            po += strlen(po);
+        }
+        dlog(LOG_PARSE, "Mode 0x%.2x: %s\n", mi, bitout);
     }
-    dlog(LOG_PARSE, "Mode 0x%.2x: %s\n", mi, bitout);
 
     if (memcmp(mode_data, cmp, exp_len) != 0) {
         elog("ERROR: Mapping retrieved not equal to mapping saved for mode 0x%.2x\n", mi);
@@ -961,13 +993,15 @@ static int mode_print(unsigned char *mode_data, int len) {
 
     char rawout[255]
          ,*po = &rawout[0];
-    for (i = 0; i < len; ++i) {
-        sprintf(po, "%.2x", (mode_data)[i]);
-        po += strlen(po);
-        if ((i+1) % 4 == 0) sprintf(po, " ");
-        po += strlen(po);
+    if (LOG_PARSE) { /* OPT-004: skip formatting when debug disabled */
+        for (i = 0; i < len; ++i) {
+            sprintf(po, "%.2x", (mode_data)[i]);
+            po += strlen(po);
+            if ((i+1) % 4 == 0) sprintf(po, " ");
+            po += strlen(po);
+        }
+        dlog(LOG_PARSE, "RAW: %s\n", rawout);
     }
-    dlog(LOG_PARSE, "RAW: %s\n", rawout);
 
     i = 0;
 
@@ -1288,23 +1322,23 @@ static int mouse_editmode(void) {
     // 2117031923 S Co:2:039:0 s 21 09 03f0 0001 0004 4 = f0423900
     // 2117033709 S Co:2:039:0 s 21 09 03f0 0001 0004 4 = f0423900
     // (only doing one as they're dups)
-    libusb_control_transfer(_usb_dev_handle, LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_RECIPIENT_INTERFACE|LIBUSB_ENDPOINT_OUT, HID_REQ_SET_REPORT, 0x03f0, 0x0001, (unsigned char *)"\xf0\x42\x39\x00", 4, 1000); usleep(50000);
+    libusb_control_transfer(_usb_dev_handle, LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_RECIPIENT_INTERFACE|LIBUSB_ENDPOINT_OUT, HID_REQ_SET_REPORT, 0x03f0, 0x0001, (unsigned char *)"\xf0\x42\x39\x00", 4, 1000); usleep(USB_DELAY_EDITMODE_STEP); /* OPT-003 */
 
     // 2117041527 S Co:2:039:0 s 21 09 03f2 0001 0002 2 = f24f
-    libusb_control_transfer(_usb_dev_handle, LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_RECIPIENT_INTERFACE|LIBUSB_ENDPOINT_OUT, HID_REQ_SET_REPORT, 0x03f2, 0x0001, (unsigned char *)"\xf2\x4f", 2, 1000); usleep(50000);
+    libusb_control_transfer(_usb_dev_handle, LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_RECIPIENT_INTERFACE|LIBUSB_ENDPOINT_OUT, HID_REQ_SET_REPORT, 0x03f2, 0x0001, (unsigned char *)"\xf2\x4f", 2, 1000); usleep(USB_DELAY_EDITMODE_STEP); /* OPT-003 */
 
     // 2117043288 S Co:2:039:0 s 21 09 03f0 0001 0004 4 = f0000000
-    libusb_control_transfer(_usb_dev_handle, LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_RECIPIENT_INTERFACE|LIBUSB_ENDPOINT_OUT, HID_REQ_SET_REPORT, 0x03f0, 0x0001, (unsigned char *)"\xf0\x00\x00\x00", 4, 1000); usleep(50000);
+    libusb_control_transfer(_usb_dev_handle, LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_RECIPIENT_INTERFACE|LIBUSB_ENDPOINT_OUT, HID_REQ_SET_REPORT, 0x03f0, 0x0001, (unsigned char *)"\xf0\x00\x00\x00", 4, 1000); usleep(USB_DELAY_EDITMODE_STEP); /* OPT-003 */
 
     // 2117063607 S Co:2:039:0 s 21 09 03f1 0001 0002 2 = f100
     // Is this reboot or something? Causes lights to turn off
-    libusb_control_transfer(_usb_dev_handle, LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_RECIPIENT_INTERFACE|LIBUSB_ENDPOINT_OUT, HID_REQ_SET_REPORT, 0x03f1, 0x0001, (unsigned char *)"\xf1\x00", 2, 1000); usleep(50000);
+    libusb_control_transfer(_usb_dev_handle, LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_RECIPIENT_INTERFACE|LIBUSB_ENDPOINT_OUT, HID_REQ_SET_REPORT, 0x03f1, 0x0001, (unsigned char *)"\xf1\x00", 2, 1000); usleep(USB_DELAY_EDITMODE_STEP); /* OPT-003 */
 
     //DUPS OF ABOVE// // 2117071455 S Co:2:039:0 s 21 09 03f2 0001 0002 2 = f24f
     //DUPS OF ABOVE// // 2117074118 S Co:2:039:0 s 21 09 03f0 0001 0004 4 = f0000000
     //DUPS OF ABOVE// // 2117089459 S Co:2:039:0 s 21 09 03f1 0001 0002 2 = f100
 
-    usleep(500000);
+    usleep(USB_DELAY_EDITMODE_LONG); /* OPT-003 */
 
     // START EDIT
     // 2161557129 S Co:2:039:0 s 21 09 03f0 0001 0004 4 = f0420000
@@ -1336,7 +1370,8 @@ int mouse_prime(void) {
         return exit_usberr;
     }
 
-    display_mouse_hid(LOGITECH_G300S_VENDOR_ID, LOGITECH_G300S_PRODUCT_ID);
+    if (LOG_USB) /* OPT-005: skip descriptor enumeration when debug disabled */
+        display_mouse_hid(LOGITECH_G300S_VENDOR_ID, LOGITECH_G300S_PRODUCT_ID);
 
     // TODO: Get interface index somehow
     _usb_interface_index = 1;
@@ -1427,6 +1462,9 @@ int main (int argc, char *argv[]) {
             {"dpishift",    1, 0, 'S'},
             {"no-dpishift", 0, 0, 'U'},
 
+            {"verify",      0, 0, 'v'}, /* OPT-002 */
+            {"no-verify",   0, 0, 'n'}, /* OPT-002 */
+
             {"colour",      1, 0, 'c'},
             {"color",       1, 0, 'c'},
 
@@ -1449,7 +1487,7 @@ int main (int argc, char *argv[]) {
             {0,0,0,0}
         };
 
-        c = getopt_long(argc, argv, "hVs:p:m:r:A:B:C:D:F:S::Uc:1:2:3:4:5:6:7:8:9:",
+        c = getopt_long(argc, argv, "hVs:p:m:r:A:B:C:D:F:S::Uvnc:1:2:3:4:5:6:7:8:9:",
                 long_options, &option_index);
 
         // If we've had a previous error, or there's not more options, break
@@ -1603,7 +1641,7 @@ int main (int argc, char *argv[]) {
                 mouse_editmode();
 
                 if (mode_load(&mode_data_l[0], _usb_dev_handle, mode) > 0) {
-                    memcpy(&mode_data_s, &mode_data_l, 255);
+                    memcpy(&mode_data_s, &mode_data_l, 35); /* OPT-006: copy actual mode data, not full buffer */
                 }
             }
             break;
@@ -1702,6 +1740,14 @@ int main (int argc, char *argv[]) {
                     elog("ERROR: Disable DPI shift failed\n");
                     continue;
                 }
+                break;
+
+            // OPT-002: verify / no-verify
+            case 'v':
+                _verify_save = 1;
+                break;
+            case 'n':
+                _verify_save = 0;
                 break;
 
             // Colour/Color

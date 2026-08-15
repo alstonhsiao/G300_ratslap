@@ -69,6 +69,39 @@ Several files are auto-generated during build from `templates/` — see
 [`AGENTS.md`](AGENTS.md) and [`docs/build-conventions.md`](docs/build-conventions.md)
 for details.
 
+### Performance Tuning ###
+
+USB settle delays (the main source of execution time) are configurable at
+compile time and read-back verification is toggleable at runtime.
+
+**Compile-time delay macros** (override in `make.options.conf`):
+
+| Macro                      | Default   | Controls                              |
+|----------------------------|-----------|---------------------------------------|
+| `USB_DELAY_MODE_SAVE`      | 500ms     | Settle time after mode write          |
+| `USB_DELAY_MODE_LOAD`      | 10ms      | Settle time after mode read           |
+| `USB_DELAY_EDITMODE_STEP`  | 50ms      | Per-step delay in edit mode setup     |
+| `USB_DELAY_EDITMODE_LONG`  | 500ms     | Long settle in edit mode setup        |
+
+Example:
+
+```console
+$ # In make.options.conf:
+$ OPTIONS += -DUSB_DELAY_MODE_SAVE=100000
+```
+
+**Runtime verification toggle:**
+
+```console
+$ ./ratslap --modify F3 --colour magenta --no-verify   # skip read-back (faster)
+$ ./ratslap --modify F3 --colour magenta --verify      # force read-back (default)
+```
+
+> **Caution:** Lowering delays below hardware requirements may cause
+> intermittent write failures. Always test with `--print` after modifying
+> delay values. See [`docs/build-conventions.md`](docs/build-conventions.md)
+> for full details.
+
 
 
 ----

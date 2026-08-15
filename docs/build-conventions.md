@@ -28,6 +28,36 @@ Build options (debug flags) live in `make.options.conf` (root), copied from
 `templates/make.options.conf.DEFAULT` on first build. Available options:
 `DEBUG`, `DEBUG_USB`, `DEBUG_PARSE`, `DEBUG_KEY`.
 
+### USB Delay Tuning (Performance)
+
+The following compile-time macros control USB settle delays (in
+microseconds). All have safe defaults matching the original hard-coded
+values. Override them in `make.options.conf` via `-D` flags to tune for
+your hardware.
+
+| Macro                      | Default   | Controls                              |
+|----------------------------|-----------|---------------------------------------|
+| `USB_DELAY_MODE_SAVE`      | `500000`  | Settle time after mode write          |
+| `USB_DELAY_MODE_LOAD`      | `10000`   | Settle time after mode read           |
+| `USB_DELAY_EDITMODE_STEP`  | `50000`   | Per-step delay in mouse_editmode      |
+| `USB_DELAY_EDITMODE_LONG`  | `500000`  | Long settle in mouse_editmode         |
+
+Example `make.options.conf` entry:
+
+```
+OPTIONS += -DUSB_DELAY_MODE_SAVE=100000
+```
+
+### Read-Back Verification
+
+After `mode_save`, the tool reads back the mode data and compares it to
+verify the write succeeded. This can be controlled at runtime and compile
+time:
+
+- **Runtime:** `--verify` (default) / `--no-verify` CLI flag.
+- **Compile time:** `-DNO_VERIFY_SAVE` in `make.options.conf` to disable
+  by default. `-DVERIFY_SAVE_DEFAULT=0` for the same effect.
+
 ## Compile Flags
 
 `-O2 -pipe -Wall -Werror -ggdb`

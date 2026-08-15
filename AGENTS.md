@@ -12,7 +12,7 @@ This repo (`alstonhsiao/G300_ratslap`) is a fork of upstream `krayon/ratslap`
 
 | 要做什麼 | 先讀哪個檔案 |
 |----------|-------------|
-| 建置 / 編譯 / 了解 compile flags | [`docs/build-conventions.md`](docs/build-conventions.md) |
+| 建置 / 編譯 / 了解 compile flags / 效能調校 | [`docs/build-conventions.md`](docs/build-conventions.md) |
 | 了解分支命名 / commit / release 流程 | [`docs/git-workflow.md`](docs/git-workflow.md) |
 | 動到 USB 通訊 / 按鍵映射 / protocol | [`docs/usb-protocol.md`](docs/usb-protocol.md) |
 | 看使用範例 / 鍵名 / 已知限制 | [`README.md`](README.md) |
@@ -83,6 +83,8 @@ Sync with upstream via `git fetch upstream` and merge/rebase onto `main`.
   確保 `-Wall -Werror` 乾淨。
 - **支援新滑鼠：** VID/PID 與 USB protocol 都寫死在 `src/main.c`，新裝置需
   自行處理 protocol。
+- **調校 USB 延遲：** 透過 `make.options.conf` 的 `-DUSB_DELAY_*` 巨集調整。
+  詳見 [`docs/build-conventions.md`](docs/build-conventions.md)。
 - **commit 前：** `make clean && make`。無測試套件；`-Werror` 通過即為 gate。
 
 ---

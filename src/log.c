@@ -73,7 +73,7 @@ void std_output(FILE *strm, const char *srcfile, const int line
     }
 
     va_start(ap, text);
-        vsprintf(_logout, text, ap);
+        vsnprintf(_logout, sizeof(_logout), text, ap); /* OPT-007: bounds-checked */
     va_end(ap);
 
     st = _logout;
