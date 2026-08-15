@@ -1,0 +1,117 @@
+# AGENTS.md #
+
+RatSlap — Linux CLI tool for configuring Logitech G300 / G300s gaming mice via
+USB HID control messages. C program, GPL v2, uses libusb-1.0.
+
+This repo (`alstonhsiao/G300_ratslap`) is a fork of upstream `krayon/ratslap`
+(tracked via the `upstream` remote).
+
+---
+
+## Quick Map
+
+| 要做什麼 | 先讀哪個檔案 |
+|----------|-------------|
+| 建置 / 編譯 / 了解 compile flags | [`docs/build-conventions.md`](docs/build-conventions.md) |
+| 了解分支命名 / commit / release 流程 | [`docs/git-workflow.md`](docs/git-workflow.md) |
+| 動到 USB 通訊 / 按鍵映射 / protocol | [`docs/usb-protocol.md`](docs/usb-protocol.md) |
+| 看使用範例 / 鍵名 / 已知限制 | [`README.md`](README.md) |
+| 了解開發分支策略全文 | [`docs/DEV_WORKFLOW.md`](docs/DEV_WORKFLOW.md) |
+| 看預設出廠設定輸出 | `docs/G300s_Default_Configuration.txt` |
+| 看 USB sniffing 原始擷取與欄位解碼 | `docs/G300s_USB_sniffing.txt` |
+
+---
+
+## 不可違反的規則
+
+1. **不可編輯自動生成的檔案**（`src/git.h`、`src/log.h`、`manpage.1`、
+   `make.options.conf`）。改它們對應的 `templates/` 下的 `.TEMPLATE` 或
+   `.DEFAULT` 檔。
+2. **新程式碼必須在 `-Wall -Werror` 下乾淨編譯。** 這是唯一的 gate；
+   沒有測試套件。
+3. **commit 前跑 `make clean && make`** 確認建置通過。
+4. **不可重新映射滾輪**（button 4/5）——硬體限制，非軟體可繞過。
+5. **保留每個源碼檔的 vim modeline**（`ts=4 sw=4 tw=80 cindent`）。
+6. **不自動 commit、不自動 push。** 完成後只輸出變更摘要。
+
+---
+
+## 派工與停損
+
+1. 派工門檻：預估要讀超過 5 個檔案或 50KB、或需要掃整個目錄時，
+   派 subagent，主對話只收結論；低於門檻自己做，不要為小事派工。
+   - 正例：要理解 `main.c` 中 USB 通訊全貌 + 對照
+     `G300s_USB_sniffing.txt` 的欄位佈局 → 派 subagent 做協議分析。
+   - 反例：只想確認 `app.h` 裡的 `APP_NAME` 常數值 → 自己讀，不派工。
+2. 派工三件套：每次派 subagent 必須寫明 (1) 目標與動機 (2) 驗收條件
+   (3) 回報格式——只回結論 + 檔案:行號，長產物落檔傳路徑。
+3. 停損線：同一子任務用同一種方法連錯兩次，停止重試；
+   帶完整失敗軌跡（做了什麼、錯誤訊息、已排除什麼）回報使用者，
+   不得換個小花樣試第三次。
+
+---
+
+## Source Layout（速覽）
+
+| File          | Role                                                          |
+|---------------|---------------------------------------------------------------|
+| `src/main.c`  | All application logic: USB comms, CLI parsing, mode/profile IO |
+| `src/log.c`   | Logging implementation                                         |
+| `src/app.h`   | App name, version, author constants                            |
+| `src/lang.h`  | i18n stub (`_()` macro, currently passthrough)                |
+
+USB VID:PID = `046d:c246`（定義在 `src/main.c`）。
+
+---
+
+## Remotes
+
+| Remote     | URL                                    | Role      |
+|------------|----------------------------------------|-----------|
+| `origin`   | `github.com/alstonhsiao/G300_ratslap`  | This fork |
+| `upstream` | `github.com/krayon/ratslap`            | Upstream  |
+
+Sync with upstream via `git fetch upstream` and merge/rebase onto `main`.
+
+---
+
+## 常見任務
+
+- **新增 key/button 名稱：** 改 `src/main.c` 裡的 key table（USB HID codes）。
+  詳見 [`docs/usb-protocol.md`](docs/usb-protocol.md)。
+- **新增 CLI 選項：** 延伸 `src/main.c` 的 `getopt` long options 表與 handler。
+  確保 `-Wall -Werror` 乾淨。
+- **支援新滑鼠：** VID/PID 與 USB protocol 都寫死在 `src/main.c`，新裝置需
+  自行處理 protocol。
+- **commit 前：** `make clean && make`。無測試套件；`-Werror` 通過即為 gate。
+
+---
+
+## 文件維護規則
+
+### 文件修改權限
+
+修改任何治理文件前，先聲明該檔屬於哪一級。
+
+| 級別 | 範圍 | 規則 |
+| ---- | ---- | ---- |
+| 🟢 可自行修改 | 各 INDEX.md 的檔案清單、Quick Map 的路徑、README 使用說明 | 事實性內容，改完在回報中列出即可 |
+| 🟡 改前必須先問使用者 | 不可違反的規則區、派工與停損區、`src/app.h` / `src/main.c` 中的 USB protocol 核心定義 | 即使只是「精簡措辭」也要先問，不得擅自改寫或弱化 |
+| 🔵 只准追加，不准自行刪改 | 各文件的 `NEED_REVIEW` 標記 | 認為某條過時，追加「建議歸檔」標註並提報，不得直接刪。經使用者明確核准後，由 agent 執行歸檔搬移 |
+
+### troubleshooting 升格規則
+
+- 完整事故經過一律寫進 docs/troubleshooting.md（追加新條目，附日期）。
+- 符合下列任一條件時「升格」：同類坑第二次發生、或屬高風險事故。
+  升格 = 在 Hub 對應規則後追加一行反例 + troubleshooting 條目編號。
+- 未升格的教訓留在 troubleshooting 檔即可，不要把 Hub 當事故簿。
+
+### 路徑檢查與瘦身協議
+
+- 路徑檢查：例行維護時，逐一驗證 Hub 與各 INDEX.md 中提到的檔案路徑
+  是否存在；失效路徑立即修正，無法確定則標 NEED_REVIEW。
+- 瘦身觸發：troubleshooting 檔超過約 600 行、或「建議歸檔」標註累積
+  5 條以上時，agent 主動列提名表 | 條目 | 建議 | 理由 | 給使用者裁決。
+- 瘦身執行：獲准條目由 agent 搬移至 docs/archive/（搬移不刪除）。
+- 瘦身判準：區分「場景過時」（可歸檔）與「教訓仍通用」（保留，甚至升格），
+  提名表逐條說明屬於哪種。

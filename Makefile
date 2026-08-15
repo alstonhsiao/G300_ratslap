@@ -69,7 +69,7 @@ CPU_FLAG       =
 #     -ggdb
 OPT_FLAGS      = -O2 -pipe -Wall -Werror -ggdb
 
-INCDIR         =
+INCDIR         = -Isrc
 
 LIBDIR         =
 
@@ -86,8 +86,8 @@ MD_FLAGS      += -x abbr -x def_list -x footnotes -x tables -x toc -x fenced_cod
 
 
 # Application name
-APPNAME        = $(shell sed -n 's/^[ \t]*\#define[ \t]*APP_NAME[ \t]*"\([^"]*\)".*$$/\1/p'    app.h)
-BINNAME        = $(shell sed -n 's/^[ \t]*\#define[ \t]*BIN_NAME[ \t]*"\([^"]*\)".*$$/\1/p'    app.h)
+APPNAME        = $(shell sed -n 's/^[ \t]*\#define[ \t]*APP_NAME[ \t]*"\([^"]*\)".*$$/\1/p'    src/app.h)
+BINNAME        = $(shell sed -n 's/^[ \t]*\#define[ \t]*BIN_NAME[ \t]*"\([^"]*\)".*$$/\1/p'    src/app.h)
 
 # Retrieve version from git
 #     This is something like:
@@ -132,7 +132,7 @@ PROGS          = $(BINNAME)
 DIST_FILES     = $(PROGS) $(PROGS:=.asc) LICENSE README.md $(if $(strip $(MARKDOWN_GEN)),README.html,) Changelog
 
 # Object files to build
-OBJS           = log.o main.o
+OBJS           = src/log.o src/main.o
 
 # Documents (markdown files)
 MD_FILES       = $(wildcard *.md)
@@ -199,13 +199,13 @@ clean:
 	@echo "  deleting: tags";
 	@rm -f tags;
 	
-	@echo "  deleting: git.h";
-	@rm -f git.h;
+	@echo "  deleting: src/git.h";
+	@rm -f src/git.h;
 	
-	@echo "  deleting: log.h";
-	@rm -f log.h;
+	@echo "  deleting: src/log.h";
+	@rm -f src/log.h;
 	
-	@if diff $(OPTIONS_FILE).DEFAULT $(OPTIONS_FILE) >/dev/null; then \
+	@if diff templates/$(OPTIONS_FILE).DEFAULT $(OPTIONS_FILE) >/dev/null; then \
 		echo "  deleting: $(OPTIONS_FILE)"; \
 		rm -Rf "$(OPTIONS_FILE)"; \
 	else \
@@ -238,46 +238,46 @@ Changelog: gitup
 	@echo "Generating Changelog..."
 	@git log --color=never --pretty=tformat:"%ai %an <%aE>%n%w(76,4,4)%h %s%n%+b" >Changelog
 
-git.h: gitup git.h.TEMPLATE
+git.h: gitup templates/git.h.TEMPLATE
 	@# Generating GIT header
 	@echo "Generating git header file..."
-	@cat git.h.TEMPLATE >git.h
-	@sed -i 's#//SOURCE//#// WARNING // Auto-generated file, DO NOT MODIFY //#' git.h
-	@sed -i 's#\%\%APP_VERSION\%\%#$(APPVER)#'                                  git.h
-	@sed -i 's#\%\%BUILD_DATE\%\%#$(BUILD_DATE)#'                               git.h
-	@sed -i 's#\%\%BUILD_COMMIT\%\%#$(BUILD_COMMIT)#'                           git.h
+	@cat templates/git.h.TEMPLATE >src/git.h
+	@sed -i 's#//SOURCE//#// WARNING // Auto-generated file, DO NOT MODIFY //#' src/git.h
+	@sed -i 's#\%\%APP_VERSION\%\%#$(APPVER)#'                                  src/git.h
+	@sed -i 's#\%\%BUILD_DATE\%\%#$(BUILD_DATE)#'                               src/git.h
+	@sed -i 's#\%\%BUILD_COMMIT\%\%#$(BUILD_COMMIT)#'                           src/git.h
 
-log.h: log.h.TEMPLATE
+log.h: templates/log.h.TEMPLATE
 	@# Generating log header
 	@echo "Generating log header file..."
-	@cat log.h.TEMPLATE >log.h
+	@cat templates/log.h.TEMPLATE >src/log.h
 	@for o in $(OPTIONS:DEBUG%=LOG%); do \
-	    sed -i 's/\(#define '$${o}' *\)NULL.*$$/\1_logfile/' log.h; \
+	    sed -i 's/\(#define '$${o}' *\)NULL.*$$/\1_logfile/' src/log.h; \
 	done
 
-manpage.1: manpage.1.TEMPLATE
+manpage.1: templates/manpage.1.TEMPLATE
 	@# Generating manpage
 	@echo "Generating man page file..."
-	@cat manpage.1.TEMPLATE >manpage.1
+	@cat templates/manpage.1.TEMPLATE >manpage.1
 	@sed -i 's#\%\%APP_VERSION\%\%#$(APPVER)#'                                  manpage.1
 	@sed -i 's#\%\%BUILD_MONTH\%\%#$(BUILD_MONTH)#'                             manpage.1
 	@sed -i 's#\%\%BUILD_YEAR\%\%#$(BUILD_YEAR)#'                               manpage.1
 
-$(OPTIONS_FILE): $(OPTIONS_FILE).DEFAULT
-	@cp $(OPTIONS_FILE).DEFAULT $(OPTIONS_FILE)
+$(OPTIONS_FILE): templates/$(OPTIONS_FILE).DEFAULT
+	@cp templates/$(OPTIONS_FILE).DEFAULT $(OPTIONS_FILE)
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCDIR) -c "$<" -o "$@"
 
-%.html: %.md markdown.TEMPLATE.html
+%.html: %.md templates/markdown.TEMPLATE.html
 	@# Generating HTML
-	@sed '/^/,/^%%%%%BODY%%%%%/{/^%%%%%BODY%%%%%/,$$d}' <markdown.TEMPLATE.html  >"$@"
+	@sed '/^/,/^%%%%%BODY%%%%%/{/^%%%%%BODY%%%%%/,$$d}' <templates/markdown.TEMPLATE.html  >"$@"
 	@TITLE="$(shell sed -n 's/^# \([^#]*\) #$$/\1/p;q' <"$<")"; \
 		echo "Generating $$TITLE ($<)"; \
 		sed -i 's/%%%%%TITLE%%%%%/'"$$TITLE"'/'             "$@"
 	$(MARKDOWN_GEN) $(MD_FLAGS) "$<"                                            >>"$@"
 	@echo                                                                       >>"$@"
-	@sed '1,/^%%%%%BODY%%%%%/d'                         <markdown.TEMPLATE.html >>"$@"
+	@sed '1,/^%%%%%BODY%%%%%/d'                         <templates/markdown.TEMPLATE.html >>"$@"
 
 %.asc: %
 	@echo "Signing: $${f}..."

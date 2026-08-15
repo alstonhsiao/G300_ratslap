@@ -44,6 +44,34 @@ please see [CONTRIBUTING](CONTRIBUTING.md) .
 
 
 ----
+## Building from Source ##
+
+*RatSlap* is a Linux-only C program. It requires `libusb-1.0` (development
+headers) and `gcc`.
+
+```console
+$ make            # builds the `ratslap` binary
+$ make clean      # remove build artefacts
+$ make distclean  # clean + remove binaries and archives
+$ make dist       # build a signed distribution tarball
+```
+
+### Repository Layout ###
+
+| Path          | Contents                                                       |
+|---------------|----------------------------------------------------------------|
+| `src/`        | C source files (`main.c`, `log.c`, `app.h`, `lang.h`)         |
+| `templates/`  | Build templates (`.TEMPLATE`, `.DEFAULT`, HTML/CSS for docs)   |
+| `docs/`       | Developer documentation, USB protocol reference, dev workflow  |
+| `Makefile`    | Build system (GNU Make)                                        |
+
+Several files are auto-generated during build from `templates/` — see
+[`AGENTS.md`](AGENTS.md) and [`docs/build-conventions.md`](docs/build-conventions.md)
+for details.
+
+
+
+----
 ## Availability ##
 
 ### { BACKWARDS COMPATIBILITY WARNING FOR PRE-0.4.0 { ###
@@ -285,7 +313,7 @@ following:
 ```console
 libusbx: error [_get_usbfs_fd] libusbx couldn't open USB device /dev/bus/usb/002/090: Permission denied
 libusbx: error [_get_usbfs_fd] libusbx requires write access to USB device nodes.
-20161115T002046+1100 [E]           main.c:00581:mouse_init      Failed to find Logitech G300s (046d:c246)
+20161115T002046+1100 [E]     src/main.c:00581:mouse_init      Failed to find Logitech G300s (046d:c246)
 ```
 
 This is caused, as the error suggests, by the fact that you do not have write
