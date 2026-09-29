@@ -1,6 +1,6 @@
 # AGENTS.md #
 
-RatSlap — Linux CLI tool for configuring Logitech G300 / G300s gaming mice via
+RatSlap — Linux / macOS CLI tool for configuring Logitech G300 / G300s gaming mice via
 USB HID control messages. C program, GPL v2, uses libusb-1.0.
 
 This repo (`alstonhsiao/G300_ratslap`) is a fork of upstream `krayon/ratslap`
@@ -59,6 +59,7 @@ This repo (`alstonhsiao/G300_ratslap`) is a fork of upstream `krayon/ratslap`
 | `src/log.c`   | Logging implementation                                         |
 | `src/app.h`   | App name, version, author constants                            |
 | `src/lang.h`  | i18n stub (`_()` macro, currently passthrough)                |
+| `src/hid_compat.h` | `HID_REQ_*` constants for non-Linux builds (replaces `<linux/hid.h>`) |
 
 USB VID:PID = `046d:c246`（定義在 `src/main.c`）。
 
@@ -152,7 +153,7 @@ G300s 的按鈕設定寫入滑鼠內建記憶體（onboard memory），設定跟
 
 | 級別 | 範圍 | 規則 |
 | ---- | ---- | ---- |
-| 🟢 可自行修改 | 各 INDEX.md 的檔案清單、Quick Map 的路徑、README 使用說明 | 事實性內容，改完在回報中列出即可 |
+| 🟢 可自行修改 | Quick Map 與 Source Layout 的路徑、README 使用說明 | 事實性內容，改完在回報中列出即可 |
 | 🟡 改前必須先問使用者 | 不可違反的規則區、派工與停損區、`src/app.h` / `src/main.c` 中的 USB protocol 核心定義 | 即使只是「精簡措辭」也要先問，不得擅自改寫或弱化 |
 | 🔵 只准追加，不准自行刪改 | 各文件的 `NEED_REVIEW` 標記 | 認為某條過時，追加「建議歸檔」標註並提報，不得直接刪。經使用者明確核准後，由 agent 執行歸檔搬移 |
 
@@ -165,7 +166,7 @@ G300s 的按鈕設定寫入滑鼠內建記憶體（onboard memory），設定跟
 
 ### 路徑檢查與瘦身協議
 
-- 路徑檢查：例行維護時，逐一驗證 Hub 與各 INDEX.md 中提到的檔案路徑
+- 路徑檢查：例行維護時，逐一驗證 AGENTS.md 中提到的檔案路徑
   是否存在；失效路徑立即修正，無法確定則標 NEED_REVIEW。
 - 瘦身觸發：troubleshooting 檔超過約 600 行、或「建議歸檔」標註累積
   5 條以上時，agent 主動列提名表 | 條目 | 建議 | 理由 | 給使用者裁決。
